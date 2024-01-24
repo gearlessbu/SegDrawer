@@ -758,6 +758,8 @@ void Canvas::render()
     static ImVec2 scrolling(0.0f, 0.0f);
     static bool opt_enable_grid = true;
     static bool opt_enable_context_menu = true;
+    static int Bézier_count = 10;
+    static float Bézier_ratio = 0.5;
     // static bool finish_peri = false;
 
     ImGui::Checkbox("Enable grid", &opt_enable_grid);
@@ -796,6 +798,11 @@ void Canvas::render()
     }
     if (!finish_peri)
         ImGui::EndDisabled();
+    // ImGui::SameLine();
+
+    // ImGui::SetNextItemAllowOverlap();
+    // Child 2: rounded border
+
     // ImGui::Text("at (%.d)", points.Size);
     // ImGui::Text("finish_peri (%.d)", finish_peri);
 
@@ -809,10 +816,42 @@ void Canvas::render()
     //      ImGui::PopStyleVar();
     //      [...]
     //      ImGui::EndChild();
+    ImVec2 canvas_p0 = ImGui::GetCursorScreenPos(); // ImDrawList API uses screen coordinates!
+    if (item_current_idx == 1)
+    {
+        ImGuiWindowFlags window_flags = ImGuiWindowFlags_None;
+        window_flags |= ImGuiWindowFlags_MenuBar;
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.0f);
+        // ImGui::SetNextItemWidth(-ImGui::GetContentRegionAvail().x * 0.5f);
+        // ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
+        ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x * 0.2f, 100), ImGuiChildFlags_Border, window_flags);
+        if (ImGui::BeginMenuBar())
+        {
+            if (ImGui::BeginMenu("Bézier parameters"))
+            {
+                // ShowExampleMenuFile();
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenuBar();
+        }
+        ImGui::SliderInt("count", &Bézier_count, 1, 20, "%d");
+        ImGui::SliderFloat("ratio", &Bézier_ratio, 0.0f, 1.0f, "%.3f");
+
+        ImGui::EndChild();
+        // ImGui::PopItemWidth();
+        ImGui::PopStyleVar();
+        // ImGui::SetNextWindowPos(canvas_p0);
+    }
+
+    // ImGui::SetCursorPos(canvas_p0);
+    ImGui::SetCursorScreenPos(canvas_p0);
 
     // Using InvisibleButton() as a convenience 1) it will advance the layout cursor and 2) allows us to use IsItemHovered()/IsItemActive()
-    ImVec2 canvas_p0 = ImGui::GetCursorScreenPos();    // ImDrawList API uses screen coordinates!
+    canvas_p0 = ImGui::GetCursorScreenPos(); // ImDrawList API uses screen coordinates!
+    // ImVec2 canvas_p0 = ImGui::GetCursorScreenPos();    // ImDrawList API uses screen coordinates!
     ImVec2 canvas_sz = ImGui::GetContentRegionAvail(); // Resize canvas to what's available
+    // ImGui::SetNextItemAllowOverlap();
+    // ImGui::Button("Button 1", ImVec2(80, 80));
     if (canvas_sz.x < 50.0f)
         canvas_sz.x = 50.0f;
     if (canvas_sz.y < 50.0f)
@@ -825,10 +864,38 @@ void Canvas::render()
     draw_list->AddRectFilled(canvas_p0, canvas_p1, IM_COL32(50, 50, 50, 255));
     draw_list->AddRect(canvas_p0, canvas_p1, IM_COL32(255, 255, 255, 255));
 
+    // if (item_current_idx == 1)
+    // {
+    //     ImGuiWindowFlags window_flags = ImGuiWindowFlags_None;
+    //     window_flags |= ImGuiWindowFlags_MenuBar;
+    //     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.0f);
+    //     // ImGui::SetNextItemWidth(-ImGui::GetContentRegionAvail().x * 0.5f);
+    //     // ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
+    //     ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x * 0.2f, 100), ImGuiChildFlags_Border, window_flags);
+    //     if (ImGui::BeginMenuBar())
+    //     {
+    //         if (ImGui::BeginMenu("Bézier parameters"))
+    //         {
+    //             // ShowExampleMenuFile();
+    //             ImGui::EndMenu();
+    //         }
+    //         ImGui::EndMenuBar();
+    //     }
+    //     ImGui::SliderInt("count", &Bézier_count, 1, 20, "%d");
+    //     ImGui::SliderFloat("ratio", &Bézier_ratio, 0.0f, 1.0f, "%.3f");
+
+    //     ImGui::EndChild();
+    //     // ImGui::PopItemWidth();
+    //     ImGui::PopStyleVar();
+    //     // ImGui::SetNextWindowPos(canvas_p0);
+    // }
+
     // This will catch our interactions
+    // ImGuiIO &io = ImGui::GetIO();
     ImGui::InvisibleButton("canvas", canvas_sz, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
-    const bool is_hovered = ImGui::IsItemHovered();                            // Hovered
-    const bool is_active = ImGui::IsItemActive();                              // Held
+    const bool is_hovered = ImGui::IsItemHovered(); // Hovered
+    const bool is_active = ImGui::IsItemActive();   // Held
+    // ImGui::Text("IsItemHovered: %d", is_hovered);
     const ImVec2 origin(canvas_p0.x + scrolling.x, canvas_p0.y + scrolling.y); // Lock scrolled origin
     // const ImVec2 mouse_pos_in_canvas(io.MousePos.x - origin.x, io.MousePos.y - origin.y);
     // const ImVec2 mouse_pos_in_canvas(io.MousePos.x - origin.x - canvas_sz.x / 2, io.MousePos.y - origin.y - canvas_sz.y / 2);
@@ -942,7 +1009,7 @@ void Canvas::render()
             }
             y_grid_id++;
         }
-        draw_list->AddLine(ImVec2(canvas_p0.x, origin.y + canvas_sz.y / 2), ImVec2(canvas_p0.x, origin.y + canvas_sz.y / 2), IM_COL32(200, 200, 200, 255));
+        draw_list->AddLine(ImVec2(canvas_p0.x, origin.y + canvas_sz.y / 2), ImVec2(canvas_p1.x, origin.y + canvas_sz.y / 2), IM_COL32(200, 200, 200, 255));
         draw_list->AddCircleFilled(ImVec2(origin.x + canvas_sz.x / 2, origin.y + canvas_sz.y / 2), 3.0f, IM_COL32(155, 0, 0, 255), 64);
     }
     // for (int n = 0; n < points.Size; n += 2)
@@ -982,37 +1049,45 @@ void Canvas::render()
 
     if (item_current_idx == 1)
     {
-        int m = 50; // density
-        int i, j;
-        float t;
-        // int C[100 - 1]; // 二项式系数数组。这样定义有些浪费空间，但不知道更好的办法
-        // 算出来的曲线轨迹点x坐标。用float型相比int型曲线会更平滑
-        float Bézier_curve_pointx;
-        float Bézier_curve_pointy;
-
-        auto C = Culculate_Binomial_Coefficient(points.Size - 1);
-        // glLineStipple(1, 0xffff); // 设置为实线
-        // glBegin(GL_LINE_STRIP);
-        // 这里实际上是画了m条短直线来接近贝塞尔曲线
-        ImVector<ImVec2> Bézier_curve_points;
-        for (i = 0; i <= m; i++)
+        for (int i = 1; i < points.Size; ++i)
         {
-            t = (float)i / (float)m;
-            Bézier_curve_pointx = 0;
-            Bézier_curve_pointy = 0;
-            for (j = 0; j < points.Size; j++)
+            draw_list->AddCircleFilled(concept_to_canvas(points[i]), 3.0f, IM_COL32(155, 0, 0, 255), 64);
+        }
+        if (points.Size == 2)
+        {
+            draw_list->AddLine(concept_to_canvas(points[0]), concept_to_canvas(points[1]), IM_COL32(255, 255, 0, 255), 2.0f);
+        }
+        if (points.Size > 2 && !finish_peri)
+        {
+            std::vector<glm::vec2> points_glm;
+            std::vector<glm::vec2> outpoints_glm;
+            for (auto p : points)
             {
-                Bézier_curve_pointx += C[j] * pow(1 - t, points.Size - j - 1) * pow(t, j) * points[j].x;
-                Bézier_curve_pointy += C[j] * pow(1 - t, points.Size - j - 1) * pow(t, j) * points[j].y;
+                points_glm.push_back(glm::vec2{p.x, p.y});
             }
-            // glVertex2f(Bézier_curve_pointx, Bézier_curve_pointy);
-            Bézier_curve_points.push_back(ImVec2{Bézier_curve_pointx, Bézier_curve_pointy});
+            points_glm.push_back(glm::vec2{mouse_pos_in_canvas.x, mouse_pos_in_canvas.y});
+            Bézier::parsePolyline(points_glm, Bézier_count, outpoints_glm, Bézier_ratio);
+            for (int i = 0; i < outpoints_glm.size() - 1; i++)
+            {
+                draw_list->AddLine(concept_to_canvas(ImVec2{outpoints_glm[i].x, outpoints_glm[i].y}), concept_to_canvas(ImVec2{outpoints_glm[i + 1].x, outpoints_glm[i + 1].y}), IM_COL32(255, 255, 0, 255), 2.0f);
+            }
         }
-        for (i = 0; i < m; i++)
+        if (points.Size > 2 && finish_peri)
         {
-            draw_list->AddLine(concept_to_canvas(Bézier_curve_points[i]), concept_to_canvas(Bézier_curve_points[i + 1]), IM_COL32(255, 255, 0, 255), 2.0f);
+            std::vector<glm::vec2> points_glm;
+            std::vector<glm::vec2> outpoints_glm;
+            for (auto p : points)
+            {
+                points_glm.push_back(glm::vec2{p.x, p.y});
+            }
+            Bézier::parsePolygon(points_glm, Bézier_count, outpoints_glm, Bézier_ratio);
+            for (int i = 0; i < outpoints_glm.size() - 1; i++)
+            {
+                draw_list->AddLine(concept_to_canvas(ImVec2{outpoints_glm[i].x, outpoints_glm[i].y}), concept_to_canvas(ImVec2{outpoints_glm[i + 1].x, outpoints_glm[i + 1].y}), IM_COL32(255, 255, 0, 255), 2.0f);
+            }
+            draw_list->AddLine(concept_to_canvas(ImVec2{outpoints_glm[outpoints_glm.size() - 1].x, outpoints_glm[outpoints_glm.size() - 1].y}),
+                               concept_to_canvas(ImVec2{outpoints_glm[0].x, outpoints_glm[0].y}), IM_COL32(255, 255, 0, 255), 2.0f);
         }
-        // glEnd();
     }
 
     draw_list->PopClipRect();

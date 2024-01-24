@@ -5,7 +5,8 @@
 #include <glm/glm.hpp>
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 #include <math.h>
-#include <array>
+#include <vector>
+#include <cstdio>
 
 inline float cross(const ImVec2 &a, const ImVec2 &b)
 {
@@ -96,8 +97,8 @@ inline bool in_edges_range(const ImVec2 &center, const ImVec2 &next_clock_point,
     float prev_point_angle = std::atan2(prev_clock_point.y - center.y, prev_clock_point.x - center.x);
     float query_point_angle1 = std::atan2(query_point1.y - center.y, query_point1.x - center.x);
     float query_point_angle2 = std::atan2(query_point2.y - center.y, query_point2.x - center.x);
-    printf("arctan2(1,1)=%f\n", std::atan2(1.0f, 1.0f));
-    printf("na=%f, pa=%f, qa1=%f, qa2=%f\n", next_point_angle, prev_point_angle, query_point_angle1, query_point_angle2);
+    // printf("arctan2(1,1)=%f\n", std::atan2(1.0f, 1.0f));
+    // printf("na=%f, pa=%f, qa1=%f, qa2=%f\n", next_point_angle, prev_point_angle, query_point_angle1, query_point_angle2);
     // if ((next_point_angle >= 0 && prev_point_angle >= 0)||(next_point_angle <= 0 && prev_point_angle <= 0))
     auto close = [](float a, float b)
     {
@@ -127,9 +128,9 @@ inline bool in_edges_range(const ImVec2 &center, const ImVec2 &next_clock_point,
     {
         bool in1 = prev_point_angle - 1e-4 < query_point_angle1 && query_point_angle1 < next_point_angle + 1e-4;
         bool in2 = prev_point_angle - 1e-4 < query_point_angle2 && query_point_angle2 < next_point_angle + 1e-4;
-        printf("jinitaimei\n");
-        if (in1 && in2)
-            printf("jinitaimei\n");
+        // printf("jinitaimei\n");
+        // if (in1 && in2)
+        //     printf("jinitaimei\n");
         return in1 && in2;
     }
     else
@@ -171,6 +172,23 @@ inline float distance(const ImVec2 &a, const ImVec2 &b)
 {
     ImVec2 p(a.x - b.x, a.y - b.y);
     return sqrtf(p.x * p.x + p.y * p.y);
+}
+
+namespace Bézier
+{
+    // 根据当前点pt,前一点p1, 后一点p2计算当前点对应的控制点control1 control2
+    void getControlPoint(const glm::vec2 &pt, const glm::vec2 &p1, const glm::vec2 &p2,
+                         glm::vec2 &control1, glm::vec2 &control2, float ratio);
+
+    void parseBezier(const glm::vec2 &start, const glm::vec2 &end,
+                     const glm::vec2 &control1, const glm::vec2 &control2, int count, std::vector<glm::vec2> &outPoints);
+
+    void _parseBezier(const glm::vec2 &start, const glm::vec2 &end,
+                      const glm::vec2 &control1, const glm::vec2 &control2, int count, std::vector<glm::vec2> &outPoints);
+
+    void parsePolyline(const std::vector<glm::vec2> &points, int count, std::vector<glm::vec2> &outPoints, float ratio);
+
+    void parsePolygon(const std::vector<glm::vec2> &points, int count, std::vector<glm::vec2> &outPoints, float ratio);
 }
 
 #endif

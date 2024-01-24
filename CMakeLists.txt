@@ -17,6 +17,7 @@ target_link_libraries(my_opengl  GL glfw)
 add_executable(my_drawer 
 drawer.cpp 
 canvas.cpp
+imgui_math.cpp
 small_imgui/imgui.cpp
 small_imgui/imgui_widgets.cpp
 small_imgui/imgui_tables.cpp

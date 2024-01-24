@@ -190,6 +190,30 @@ drawer.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/my_drawer.dir/build.make CMakeFiles/my_drawer.dir/drawer.cpp.s
 .PHONY : drawer.cpp.s
 
+imgui_math.o: imgui_math.cpp.o
+.PHONY : imgui_math.o
+
+# target to build an object file
+imgui_math.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/my_drawer.dir/build.make CMakeFiles/my_drawer.dir/imgui_math.cpp.o
+.PHONY : imgui_math.cpp.o
+
+imgui_math.i: imgui_math.cpp.i
+.PHONY : imgui_math.i
+
+# target to preprocess a source file
+imgui_math.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/my_drawer.dir/build.make CMakeFiles/my_drawer.dir/imgui_math.cpp.i
+.PHONY : imgui_math.cpp.i
+
+imgui_math.s: imgui_math.cpp.s
+.PHONY : imgui_math.s
+
+# target to generate assembly for a file
+imgui_math.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/my_drawer.dir/build.make CMakeFiles/my_drawer.dir/imgui_math.cpp.s
+.PHONY : imgui_math.cpp.s
+
 main.o: main.cpp.o
 .PHONY : main.o
 
@@ -419,6 +443,9 @@ help:
 	@echo "... drawer.o"
 	@echo "... drawer.i"
 	@echo "... drawer.s"
+	@echo "... imgui_math.o"
+	@echo "... imgui_math.i"
+	@echo "... imgui_math.s"
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"
