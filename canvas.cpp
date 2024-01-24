@@ -383,286 +383,6 @@ void Canvas::Delaunay_triangulate()
     // return triangles;
 }
 
-void Canvasrender()
-{
-
-    static bool show_save_file_modal = false;
-    // if (show_file_window)
-    // ShowFileWindow(&show_file_window);
-    static bool use_work_area = true;
-    static ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse;
-
-    // We demonstrate using the full viewport area or the work area (without menu-bars, task-bars etc.)
-    // Based on your use case you may want one or the other.
-    const ImGuiViewport *viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(use_work_area ? viewport->WorkPos : viewport->Pos);
-    ImGui::SetNextWindowSize(use_work_area ? viewport->WorkSize : viewport->Size);
-    // ImGui::SetNextWindowSize(ImVec2{400, 400});
-
-    ImGui::Begin("Example: jini rendering", NULL, flags);
-
-    // ImGui::Open
-    // if (ImGui::Button("Save"))
-    if (show_save_file_modal)
-        ImGui::OpenPopup("Save file");
-    IMGUI_DEMO_MARKER_("Examples/Custom Rendering");
-    if (ImGui::BeginMainMenuBar())
-    {
-        if (ImGui::BeginMenu("File"))
-        {
-            IMGUI_DEMO_MARKER_("Examples/Menu");
-            ImGui::MenuItem("(demo menu)", NULL, false, false);
-            if (ImGui::MenuItem("New"))
-            {
-            }
-            // if (ImGui::MenuItem("Save", "Ctrl+S", &show_file_window))
-            if (ImGui::MenuItem("Save", "Ctrl+S", &show_save_file_modal))
-            {
-                // show_file_window = true;if (ImGui::Button("Delete.."))
-                // ImGui::OpenPopup("Delete?");
-            }
-            // if (ImGui::MenuItem("Save As.."))
-            // {
-            // }
-            ImGui::EndMenu();
-        }
-        ImGui::EndMainMenuBar();
-    }
-
-    if (ImGui::BeginPopupModal("Save file", NULL, ImGuiWindowFlags_AlwaysAutoResize))
-    {
-        // ImGui::Text("All those beautiful files will be deleted.\nThis operation cannot be undone!");
-        // ImGui::Separator();
-
-        // static int unused_i = 0;
-        // ImGui::Combo("Combo", &unused_i, "Delete\0Delete harder\0");
-
-        static bool save_to_default_folder = true;
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-        // ImGui::Checkbox("Don't ask me next time", &dont_ask_me_next_time);
-        ImGui::PopStyleVar();
-        static char buf1[60] = "";
-        ImGui::InputText("##", buf1, 60);
-        ImGui::SameLine();
-        ImGui::Checkbox("Default folder", &save_to_default_folder);
-        // ImGui::Checkbox("Default folder", &save_to_default_folder);
-        if (save_to_default_folder)
-            // ImGui::Dummy(ImVec2(120, 15));
-            ImGui::TextDisabled("The file will be save to ../assets/.");
-        else
-            ImGui::TextDisabled("Now input the absolute path.");
-        ImGui::Separator();
-
-        if (ImGui::Button("Save", ImVec2(120, 0)))
-        {
-            show_save_file_modal = false;
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::SetItemDefaultFocus();
-        ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0)))
-        {
-            show_save_file_modal = false;
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::EndPopup();
-    }
-
-    // Tip: If you do a lot of custom rendering, you probably want to use your own geometrical types and benefit of
-    // overloaded operators, etc. Define IM_VEC2_CLASS_EXTRA in imconfig.h to create implicit conversions between your
-    // types and ImVec2/ImVec4. Dear ImGui defines overloaded operators but they are internal to imgui.cpp and not
-    // exposed outside (to avoid messing with your types) In this example we are not using the maths operators!
-
-    static ImVector<ImVec2> points;
-    static ImVec2 scrolling(0.0f, 0.0f);
-    static bool opt_enable_grid = true;
-    static bool opt_enable_context_menu = true;
-    static bool finish_peri = false;
-
-    ImGui::Checkbox("Enable grid", &opt_enable_grid);
-    ImGui::Checkbox("Enable context menu", &opt_enable_context_menu);
-    ImGui::Text("Mouse Left: drag to add lines,\nMouse Right: drag to scroll, click for context menu.");
-    static ImVec2 mouse_canvas_pos_grid(0, 0);
-    ImGui::Text("at (%.3f, %.3f)", mouse_canvas_pos_grid.x, mouse_canvas_pos_grid.y);
-
-    // Typically you would use a BeginChild()/EndChild() pair to benefit from a clipping region + own scrolling.
-    // Here we demonstrate that this can be replaced by simple offsetting + custom drawing + PushClipRect/PopClipRect() calls.
-    // To use a child window instead we could use, e.g:
-    //      ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));      // Disable padding
-    //      ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(50, 50, 50, 255));  // Set a background color
-    //      ImGui::BeginChild("canvas", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Border, ImGuiWindowFlags_NoMove);
-    //      ImGui::PopStyleColor();
-    //      ImGui::PopStyleVar();
-    //      [...]
-    //      ImGui::EndChild();
-
-    // Using InvisibleButton() as a convenience 1) it will advance the layout cursor and 2) allows us to use IsItemHovered()/IsItemActive()
-    ImVec2 canvas_p0 = ImGui::GetCursorScreenPos();    // ImDrawList API uses screen coordinates!
-    ImVec2 canvas_sz = ImGui::GetContentRegionAvail(); // Resize canvas to what's available
-    if (canvas_sz.x < 50.0f)
-        canvas_sz.x = 50.0f;
-    if (canvas_sz.y < 50.0f)
-        canvas_sz.y = 50.0f;
-    ImVec2 canvas_p1 = ImVec2(canvas_p0.x + canvas_sz.x, canvas_p0.y + canvas_sz.y);
-
-    // Draw border and background color
-    ImGuiIO &io = ImGui::GetIO();
-    ImDrawList *draw_list = ImGui::GetWindowDrawList();
-    draw_list->AddRectFilled(canvas_p0, canvas_p1, IM_COL32(50, 50, 50, 255));
-    draw_list->AddRect(canvas_p0, canvas_p1, IM_COL32(255, 255, 255, 255));
-
-    // This will catch our interactions
-    ImGui::InvisibleButton("canvas", canvas_sz, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
-    const bool is_hovered = ImGui::IsItemHovered();                            // Hovered
-    const bool is_active = ImGui::IsItemActive();                              // Held
-    const ImVec2 origin(canvas_p0.x + scrolling.x, canvas_p0.y + scrolling.y); // Lock scrolled origin
-    // const ImVec2 mouse_pos_in_canvas(io.MousePos.x - origin.x, io.MousePos.y - origin.y);
-    const ImVec2 mouse_pos_in_canvas(io.MousePos.x - origin.x - canvas_sz.x / 2, io.MousePos.y - origin.y - canvas_sz.y / 2);
-    // ImGui::Text("at (%.3f, %.3f)", mouse_pos_in_canvas.x, mouse_pos_in_canvas.y);
-    // ImGui::Text("at (");
-    mouse_canvas_pos_grid = ImVec2(mouse_pos_in_canvas.x / 64.0f, mouse_pos_in_canvas.y / 64.0f);
-
-    float mouse_beginning_distance = 999.0f;
-    if (points.Size > 0 && !finish_peri)
-        mouse_beginning_distance = sqrtf((points[0].x - mouse_pos_in_canvas.x) * (points[0].x - mouse_pos_in_canvas.x) + (points[0].y - mouse_pos_in_canvas.y) * (points[0].y - mouse_pos_in_canvas.y));
-
-    // Add first and second point
-    if (is_hovered && !finish_peri && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
-    {
-        if (mouse_beginning_distance < 10.0f)
-        {
-            finish_peri = true;
-        }
-        else
-            points.push_back(mouse_pos_in_canvas);
-    }
-    // if (is_hovered && !adding_line && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
-    // {
-    //     points.push_back(mouse_pos_in_canvas);
-    //     points.push_back(mouse_pos_in_canvas);
-    //     adding_line = true;
-    // }
-    // if (adding_line)
-    // {
-    //     points.back() = mouse_pos_in_canvas;
-    //     if (!ImGui::IsMouseDown(ImGuiMouseButton_Left))
-    //         adding_line = false;
-    // }
-
-    // Pan (we use a zero mouse threshold when there's no context menu)
-    // You may decide to make that threshold dynamic based on whether the mouse is hovering something etc.
-    const float mouse_threshold_for_pan = opt_enable_context_menu ? -1.0f : 0.0f;
-    if (is_active && ImGui::IsMouseDragging(ImGuiMouseButton_Right, mouse_threshold_for_pan))
-    {
-        scrolling.x += io.MouseDelta.x;
-        scrolling.y += io.MouseDelta.y;
-    }
-
-    // Context menu (under default mouse threshold)
-    ImVec2 drag_delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right);
-    if (opt_enable_context_menu && drag_delta.x == 0.0f && drag_delta.y == 0.0f)
-        ImGui::OpenPopupOnItemClick("context", ImGuiPopupFlags_MouseButtonRight);
-    if (ImGui::BeginPopup("context"))
-    {
-        // if (adding_line)
-        //     points.resize(points.size() - 2);
-        // adding_line = false;
-        if (ImGui::MenuItem("Remove one", NULL, false, points.Size > 0))
-        {
-            if (finish_peri)
-                finish_peri = false;
-            else
-                points.resize(points.size() - 2);
-        }
-        if (ImGui::MenuItem("Remove all", NULL, false, points.Size > 0))
-        {
-            finish_peri = false;
-            points.clear();
-        }
-        ImGui::EndPopup();
-    }
-
-    // Draw grid + all lines in the canvas
-    draw_list->PushClipRect(canvas_p0, canvas_p1, true);
-    // if (opt_enable_grid)
-    // {
-    //     const float GRID_STEP = 64.0f;
-    //     for (float x = fmodf(scrolling.x, GRID_STEP); x < canvas_sz.x; x += GRID_STEP)
-    //         draw_list->AddLine(ImVec2(canvas_p0.x + x, canvas_p0.y), ImVec2(canvas_p0.x + x, canvas_p1.y), IM_COL32(200, 200, 200, 40));
-    //     for (float y = fmodf(scrolling.y, GRID_STEP); y < canvas_sz.y; y += GRID_STEP)
-    //         draw_list->AddLine(ImVec2(canvas_p0.x, canvas_p0.y + y), ImVec2(canvas_p1.x, canvas_p0.y + y), IM_COL32(200, 200, 200, 40));
-    // }
-    if (opt_enable_grid)
-    {
-        const float GRID_STEP = 64.0f;
-        float canvas_x_remain = fmodf(canvas_sz.x, 2 * GRID_STEP);
-        float canvas_y_remain = fmodf(canvas_sz.y, 2 * GRID_STEP);
-        int x_grid_num_oneside = int(canvas_sz.x * 0.5 / GRID_STEP);
-        int y_grid_num_oneside = int(canvas_sz.y * 0.5 / GRID_STEP);
-        float x_grid_id = nearest_number_cell((canvas_p0.x + fmodf(scrolling.x, GRID_STEP) + canvas_x_remain / 2 - GRID_STEP - origin.x - canvas_sz.x / 2) / GRID_STEP, 1.0f);
-        float y_grid_id = nearest_number_cell((canvas_p0.y + fmodf(scrolling.y, GRID_STEP) + canvas_y_remain / 2 - GRID_STEP - origin.y - canvas_sz.y / 2) / GRID_STEP, 1.0f);
-        for (float x = fmodf(scrolling.x, GRID_STEP) + canvas_x_remain / 2 - GRID_STEP; x < canvas_sz.x; x += GRID_STEP)
-        {
-            draw_list->AddLine(ImVec2(canvas_p0.x + x, canvas_p0.y), ImVec2(canvas_p0.x + x, canvas_p1.y), IM_COL32(200, 200, 200, 40));
-            // std::string coorinate_str = to_string_with_precision(((canvas_p0.x + x - origin.x - canvas_sz.x / 2) / GRID_STEP), 1);
-            // std::string coorinate_str = to_string_with_precision((x_grid_id - (origin.x + canvas_sz.x / 2) / GRID_STEP), 1);
-            if (!(origin.x + canvas_sz.x / 2 - canvas_p0.x - x) < 1e-2f)
-            {
-                std::string coorinate_str = to_string_with_precision((x_grid_id), 1);
-                draw_list->AddText(ImVec2(canvas_p0.x + x, origin.y + canvas_sz.y / 2), IM_COL32(255, 255, 255, 255), coorinate_str.c_str());
-            }
-            x_grid_id++;
-        }
-        draw_list->AddLine(ImVec2(origin.x + canvas_sz.x / 2, canvas_p0.y), ImVec2(origin.x + canvas_sz.x / 2, canvas_p1.y), IM_COL32(200, 200, 200, 255));
-        for (float y = fmodf(scrolling.y, GRID_STEP) + canvas_y_remain / 2 - GRID_STEP; y < canvas_sz.y; y += GRID_STEP)
-        {
-            draw_list->AddLine(ImVec2(canvas_p0.x, canvas_p0.y + y), ImVec2(canvas_p1.x, canvas_p0.y + y), IM_COL32(200, 200, 200, 40));
-            if (!(origin.y + canvas_sz.y / 2 - canvas_p0.y - y) < 1e-2f)
-            {
-                std::string coorinate_str = to_string_with_precision((y_grid_id), 1);
-                draw_list->AddText(ImVec2(origin.x + canvas_sz.x / 2, canvas_p0.y + y), IM_COL32(255, 255, 255, 255), coorinate_str.c_str());
-            }
-            y_grid_id++;
-        }
-        draw_list->AddLine(ImVec2(canvas_p0.x, origin.y + canvas_sz.y / 2), ImVec2(canvas_p0.x, origin.y + canvas_sz.y / 2), IM_COL32(200, 200, 200, 255));
-        draw_list->AddCircleFilled(ImVec2(origin.x + canvas_sz.x / 2, origin.y + canvas_sz.y / 2), 3.0f, IM_COL32(155, 0, 0, 255), 64);
-    }
-    // for (int n = 0; n < points.Size; n += 2)
-    //     draw_list->AddLine(ImVec2(origin.x + points[n].x, origin.y + points[n].y), ImVec2(origin.x + points[n + 1].x, origin.y + points[n + 1].y), IM_COL32(255, 255, 0, 255), 2.0f);
-    if (points.Size > 1)
-    {
-        for (int n = 0; n < points.Size - 1; n++)
-        {
-            draw_list->AddLine(ImVec2(origin.x + points[n].x + canvas_sz.x / 2, origin.y + points[n].y + canvas_sz.y / 2), ImVec2(origin.x + points[n + 1].x + canvas_sz.x / 2, origin.y + points[n + 1].y + canvas_sz.y / 2), IM_COL32(255, 255, 0, 255), 2.0f);
-        }
-    }
-    if (points.Size > 0 && !finish_peri)
-    {
-        draw_list->AddLine(ImVec2(origin.x + points[points.Size - 1].x + canvas_sz.x / 2, origin.y + points[points.Size - 1].y + canvas_sz.y / 2), ImVec2(origin.x + mouse_pos_in_canvas.x + canvas_sz.x / 2, origin.y + mouse_pos_in_canvas.y + canvas_sz.y / 2), IM_COL32(255, 255, 0, 255), 2.0f);
-    }
-    if (points.Size > 0 && finish_peri)
-    {
-        draw_list->AddLine(ImVec2(origin.x + points[points.Size - 1].x + canvas_sz.x / 2, origin.y + points[points.Size - 1].y + canvas_sz.y / 2), ImVec2(origin.x + points[0].x + canvas_sz.x / 2, origin.y + points[0].y + canvas_sz.y / 2), IM_COL32(255, 255, 0, 255), 2.0f);
-    }
-    draw_list->PopClipRect();
-    if (points.Size > 0 && !finish_peri)
-    {
-        if (mouse_beginning_distance < 10.0f)
-        {
-            draw_list->AddCircleFilled(ImVec2(origin.x + points[0].x + canvas_sz.x / 2, origin.y + points[0].y + canvas_sz.y / 2), 6.0f, IM_COL32(255, 0, 0, 255), 64);
-        }
-        else
-        {
-            draw_list->AddCircleFilled(ImVec2(origin.x + points[0].x + canvas_sz.x / 2, origin.y + points[0].y + canvas_sz.y / 2), 3.0f, IM_COL32(155, 0, 0, 255), 64);
-        }
-    }
-
-    // ImGui::EndTabItem();
-
-    // ImGui::PopItemWidth();
-    ImGui::End();
-}
-
 void Canvas::render()
 {
 
@@ -820,27 +540,34 @@ void Canvas::render()
     if (item_current_idx == 1)
     {
         ImGuiWindowFlags window_flags = ImGuiWindowFlags_None;
-        window_flags |= ImGuiWindowFlags_MenuBar;
+        // window_flags |= ImGuiWindowFlags_MenuBar;
+        window_flags |= ImGuiChildFlags_Border;
+        // window_flags |= ImGuiTitle;
+        // window_flags |= ImGuiWindowFlags_NoBackground;
         ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.0f);
         // ImGui::SetNextItemWidth(-ImGui::GetContentRegionAvail().x * 0.5f);
         // ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
+        // ImGui::SetNextWindowBgAlpha(0.35f);
+        // ImGui::PushStyleColor(ImGuiCol_ChildBg, ImColor(255, 0, 0));
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
         ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x * 0.2f, 100), ImGuiChildFlags_Border, window_flags);
-        if (ImGui::BeginMenuBar())
-        {
-            if (ImGui::BeginMenu("Bézier parameters"))
-            {
-                // ShowExampleMenuFile();
-                ImGui::EndMenu();
-            }
-            ImGui::EndMenuBar();
-        }
+        // if (ImGui::BeginMenuBar())
+        // {
+        //     if (ImGui::BeginMenu("Bézier parameters"))
+        //     {
+        //         // ShowExampleMenuFile();
+        //         ImGui::EndMenu();
+        //     }
+        //     ImGui::EndMenuBar();
+        // }
+        // ImGui::BeginTi
+        ImGui::GetWindowDrawList()->AddRectFilled(canvas_p0, ImVec2{canvas_p0.x + ImGui::GetContentRegionAvail().x, canvas_p0.y + 60}, IM_COL32(20, 20, 20, 155));
         ImGui::SliderInt("count", &Bézier_count, 1, 20, "%d");
         ImGui::SliderFloat("ratio", &Bézier_ratio, 0.0f, 1.0f, "%.3f");
 
+        ImGui::PopStyleColor();
         ImGui::EndChild();
-        // ImGui::PopItemWidth();
         ImGui::PopStyleVar();
-        // ImGui::SetNextWindowPos(canvas_p0);
     }
 
     // ImGui::SetCursorPos(canvas_p0);
@@ -863,32 +590,6 @@ void Canvas::render()
     ImDrawList *draw_list = ImGui::GetWindowDrawList();
     draw_list->AddRectFilled(canvas_p0, canvas_p1, IM_COL32(50, 50, 50, 255));
     draw_list->AddRect(canvas_p0, canvas_p1, IM_COL32(255, 255, 255, 255));
-
-    // if (item_current_idx == 1)
-    // {
-    //     ImGuiWindowFlags window_flags = ImGuiWindowFlags_None;
-    //     window_flags |= ImGuiWindowFlags_MenuBar;
-    //     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.0f);
-    //     // ImGui::SetNextItemWidth(-ImGui::GetContentRegionAvail().x * 0.5f);
-    //     // ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
-    //     ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x * 0.2f, 100), ImGuiChildFlags_Border, window_flags);
-    //     if (ImGui::BeginMenuBar())
-    //     {
-    //         if (ImGui::BeginMenu("Bézier parameters"))
-    //         {
-    //             // ShowExampleMenuFile();
-    //             ImGui::EndMenu();
-    //         }
-    //         ImGui::EndMenuBar();
-    //     }
-    //     ImGui::SliderInt("count", &Bézier_count, 1, 20, "%d");
-    //     ImGui::SliderFloat("ratio", &Bézier_ratio, 0.0f, 1.0f, "%.3f");
-
-    //     ImGui::EndChild();
-    //     // ImGui::PopItemWidth();
-    //     ImGui::PopStyleVar();
-    //     // ImGui::SetNextWindowPos(canvas_p0);
-    // }
 
     // This will catch our interactions
     // ImGuiIO &io = ImGui::GetIO();
